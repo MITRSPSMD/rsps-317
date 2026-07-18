@@ -8,5 +8,7 @@ tokio = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 anyhow = { workspace = true }
+sqlx = { workspace = true }
 shared = { path = "../shared" }
 packets = { path = "../packets" }
+login = { path = "../login" }

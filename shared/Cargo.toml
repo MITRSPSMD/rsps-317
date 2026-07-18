@@ -1,6 +1,10 @@
-[package]
+﻿[package]
 name = "shared"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
+serde = { workspace = true }
+sqlx = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }

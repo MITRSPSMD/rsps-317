@@ -1,0 +1,12 @@
+﻿[package]
+name = "gateway"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+shared = { path = "../shared" }
+packets = { path = "../packets" }

@@ -210,18 +210,43 @@ async fn serve_archive(cache_type: usize, file_id: u16, cache_data: &[u8]) -> Re
     }
     
     let ptr_bytes = [0, idx_data[entry_offset + 3], idx_data[entry_offset + 4], idx_data[entry_offset + 5]];
-    let block_ptr = u32::from_be_bytes(ptr_bytes) as usize;
+    let mut block_ptr = u32::from_be_bytes(ptr_bytes) as usize;
+    
+    let mut archive_data = Vec::new();
+    let mut visited = std::collections::HashSet::new();
+    let mut block_count = 0;
+    
+// Follow block chain: 510 bytes data + 2 bytes little-endian next pointer
+while block_ptr != 0 && !visited.contains(&block_ptr) {
+    visited.insert(block_ptr);
     let data_offset = block_ptr * 512;
     
     if data_offset >= cache_data.len() {
-        return Err(anyhow::anyhow!("Invalid entry: offset={}", data_offset));
+        println!("      [ARCHIVE] Block {} out of bounds (offset {} >= len {})", block_ptr, data_offset, cache_data.len());
+        break;
     }
     
-    // Read all available data from this point (entire archive)
-    let data = &cache_data[data_offset..];
-    println!("      [ARCHIVE] Serving {} bytes from offset {} (all remaining data)", data.len(), data_offset);
-    info!("→ Served type={} id={}: {} bytes", cache_type, file_id, data.len());
-    Ok(data.to_vec())
+    if data_offset + 512 > cache_data.len() {
+        let remaining = cache_data.len() - data_offset;
+        println!("      [ARCHIVE] Block {} incomplete, {} bytes available", block_ptr, remaining);
+        archive_data.extend_from_slice(&cache_data[data_offset..]);
+        break;
+    }
+    
+    let block = &cache_data[data_offset..data_offset + 512];
+    archive_data.extend_from_slice(&block[0..510]);
+    
+    // Read next block pointer from bytes 510-511 (LITTLE-ENDIAN)
+    block_ptr = u16::from_le_bytes([block[510], block[511]]) as usize;
+    block_count += 1;
+    
+    println!("      [ARCHIVE] Block {}: next={}", block_count - 1, block_ptr);
+}
+    
+    println!("      [ARCHIVE] Complete: {} bytes from {} blocks", archive_data.len(), block_count);
+    info!("→ Served type={} id={}: {} bytes ({} blocks)", cache_type, file_id, archive_data.len(), block_count);
+    
+    Ok(archive_data)
 }
 
 async fn serve_cache_file(data_type: usize, file_id: u16) -> Result<Vec<u8>> {

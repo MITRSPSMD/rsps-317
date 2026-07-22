@@ -14,14 +14,29 @@ pub struct LoginResponse {
 }
 
 pub fn parse_login_packet(data: &[u8]) -> Option<LoginPacket> {
-    // For now, just a placeholder
-    // Later: implement actual 317 binary protocol parsing
-    if data.len() < 2 {
+    if data.len() < 4 {
         return None;
     }
-    
-    Some(LoginPacket {
-        username: "test_user".to_string(),
-        password: "test_pass".to_string(),
-    })
+
+    let mut pos = 0;
+    let username_len = u16::from_be_bytes([data[pos], data[pos + 1]]) as usize;
+    pos += 2;
+
+    if data.len() < pos + username_len + 2 {
+        return None;
+    }
+
+    let username = String::from_utf8(data[pos..pos + username_len].to_vec()).ok()?;
+    pos += username_len;
+
+    let password_len = u16::from_be_bytes([data[pos], data[pos + 1]]) as usize;
+    pos += 2;
+
+    if data.len() < pos + password_len {
+        return None;
+    }
+
+    let password = String::from_utf8(data[pos..pos + password_len].to_vec()).ok()?;
+
+    Some(LoginPacket { username, password })
 }
